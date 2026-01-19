@@ -2094,6 +2094,7 @@ bool LexerImpl::StartCollectTokens()
     }
     enableCollect = true;
     collectTokens.clear();
+    collectTokensFindCache.clear();
     return true;
 }
 
@@ -2109,9 +2110,10 @@ void LexerImpl::CollectToken(const Token& token)
     if (!enableCollect) {
         return;
     }
-    auto it = std::find_if(collectTokens.begin(), collectTokens.end(), [&token](auto& t) { return t == token; });
-    if (it == collectTokens.end()) {
+    // Use cache for O(1) lookup instead of O(n) linear search
+    if (collectTokensFindCache.find(token.Begin()) == collectTokensFindCache.end()) {
         collectTokens.push_back(token);
+        collectTokensFindCache.insert(token.Begin());
     }
 }
 
