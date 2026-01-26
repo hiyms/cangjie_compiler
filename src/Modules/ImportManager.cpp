@@ -295,13 +295,13 @@ bool ImportManager::HandleParsedPackage(
         // The current package has ever been macro-related, but now it's used in non-macro scene,
         // so we need collect STD deps for this package and its dependent packages.
         cjoManager->SetOnlyUsedByMacro(package.fullPackageName, false);
-        HandleSTDPackage(package.fullPackageName, filePath, isRecursive);
+        HandleStdPackage(package.fullPackageName, filePath, isRecursive);
         for (auto depStdPkg : package.GetAllDependentStdPkgs()) {
             auto [it, succ] = cjoFilePaths.emplace(depStdPkg, "");
             if (succ) {
                 it->second = FileUtil::FindSerializationFile(depStdPkg, SERIALIZED_FILE_EXTENSION, GetSearchPath());
             }
-            HandleSTDPackage(depStdPkg, it->second, true);
+            HandleStdPackage(depStdPkg, it->second, true);
         }
         return ResolveImportedPackageHeaders(package, true);
     }
@@ -373,13 +373,13 @@ bool ImportManager::ResolveImportedPackageForFile(File& file, bool isRecursive)
         if ((!IsMacroRelatedPackageName(file.curPackage->fullPackageName) && !package->isMacroPackage) ||
             curPackage->isMacroPackage || macroReExportCommonPackage) {
             // If package is needed for CodeGen, we also should collect the standard library dependencies.
-            HandleSTDPackage(fullPackageName, cjoPath, isRecursive);
+            HandleStdPackage(fullPackageName, cjoPath, isRecursive);
             for (auto depStdPkg : package->GetAllDependentStdPkgs()) {
                 auto [it, succ] = cjoFilePaths.emplace(depStdPkg, "");
                 if (succ) {
                     it->second = FileUtil::FindSerializationFile(depStdPkg, SERIALIZED_FILE_EXTENSION, GetSearchPath());
                 }
-                HandleSTDPackage(depStdPkg, it->second, true);
+                HandleStdPackage(depStdPkg, it->second, true);
             }
         } else {
             cjoManager->SetOnlyUsedByMacro(fullPackageName, true);
@@ -397,7 +397,7 @@ void ImportManager::SetImportedPackageFromASTNode(std::vector<OwnedPtr<AST::Pack
     }
 }
 
-void ImportManager::HandleSTDPackage(const std::string& fullPackageName, const std::string& cjoPath, bool isRecursive)
+void ImportManager::HandleStdPackage(const std::string& fullPackageName, const std::string& cjoPath, bool isRecursive)
 {
     auto type = isRecursive ? DepType::INDIRECT : DepType::DIRECT;
     auto typeWithFullPkgName = stdDepsMap.find(cjoPath);
