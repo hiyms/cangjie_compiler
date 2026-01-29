@@ -219,7 +219,7 @@ void ParserImpl::DiagExpectedIdentifierImportSpec(Ptr<Node> node)
 
 void ParserImpl::DiagRawIdentifierNotAllowed(std::string& str)
 {
-    auto builder = ParseDiagnoseRefactor(DiagKindRefactor::parse_not_allowed_raw_identifier, lastToken, str);
+    ParseDiagnoseRefactor(DiagKindRefactor::parse_not_allowed_raw_identifier, lastToken, str);
 }
 
 void ParserImpl::DiagExpectedIdentifierGenericConstraint(Ptr<Node> node)
