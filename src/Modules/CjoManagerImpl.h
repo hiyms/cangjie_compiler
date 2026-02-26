@@ -169,6 +169,13 @@ public:
     {
         cjoPathFindCache[cjoName] = cjoPath;
     }
+
+    /**
+     * @brief Substitute imported TypeAliasTy in all loaded packages.
+     * @param srcPackages The source packages where imported TypeAliasTy come from.
+     */
+    void SubstituteImportedTypeAliasTy(const std::vector<Ptr<AST::Package>>& srcPackages);
+
 private:
     DiagnosticEngine& diag;
     TypeManager& typeManager;

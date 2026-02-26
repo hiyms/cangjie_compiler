@@ -64,20 +64,6 @@ void AddImplicitImportAll(File& file, const std::string& fullPackageName)
     file.imports.emplace_back(CreateImportSpec(fullPackageName, "*", "", fullPackageNameToPrefixPaths));
 }
 
-bool HasIfAvailable(Package& pkg)
-{
-    bool ret = false;
-    auto hasIfAvailable = [&ret](Ptr<Node> node) {
-        if (auto mee = DynamicCast<MacroExpandExpr>(node); mee && mee->invocation.IsIfAvailable()) {
-            ret = true;
-            return VisitAction::STOP_NOW;
-        }
-        return VisitAction::WALK_CHILDREN;
-    };
-    Walker(&pkg, hasIfAvailable).Walk();
-    return ret;
-}
-
 void AddImplicitImports(Package& pkg, const GlobalOptions& opts)
 {
     for (auto& file : pkg.files) {
@@ -91,11 +77,6 @@ void AddImplicitImports(Package& pkg, const GlobalOptions& opts)
         }
         if (opts.compileTestsOnly && ImportManager::IsTestPackage(pkg.fullPackageName)) {
             AddImplicitImportAll(*file, ImportManager::GetMainPartPkgNameForTestPkg(pkg.fullPackageName));
-        }
-        if (opts.target.env == Triple::Environment::OHOS && HasIfAvailable(pkg)) {
-            // For @IfAvailable desugar, depend on 'ohos.device_info.DeviceInfo' and 'ohos.base.canIUse'.
-            AddImplicitImportAll(*file, "ohos.device_info");
-            AddImplicitImportAll(*file, "ohos.base");
         }
     }
 }
@@ -246,7 +227,7 @@ void ImportManager::ExportAST(bool saveFileWithAbsPath, std::vector<uint8_t>& as
             .needAbsPath = saveFileWithAbsPath,
             .compileCjd = opts.compileCjd,
         },
-        *cjoManager);
+        *cjoManager, typeManager);
     if (opts.outputMode == GlobalOptions::OutputMode::CHIR) {
         writer.SetSerializingCommon();
     }
@@ -275,7 +256,7 @@ std::vector<uint8_t> ImportManager::ExportASTSignature(const Package& pkg)
             .exportForIncr = true,
             .compileCjd = opts.compileCjd,
         },
-        *cjoManager);
+        *cjoManager, typeManager);
     auto packageDecl = cjoManager->GetPackageDecl(pkg.fullPackageName);
     CJC_NULLPTR_CHECK(packageDecl);
     writer.PreSaveFullExportDecls(*packageDecl->srcPackage);
@@ -290,7 +271,14 @@ void ImportManager::ExportDeclsWithContent(bool saveFileWithAbsPath, Package& pa
 {
     // NOTE: If 'importSrcCode' is disabled, we also do not need to export source code.
     auto writer = new ASTWriter(diag, GeneratePkgDepInfo(package),
-        {importSrcCode, false, opts.exportForTest, saveFileWithAbsPath, opts.compileCjd}, *cjoManager);
+        {
+            .exportContent = importSrcCode,
+            .exportForIncr = false,
+            .exportForTest = opts.exportForTest,
+            .needAbsPath = saveFileWithAbsPath,
+            .compileCjd = opts.compileCjd,
+        },
+        *cjoManager, typeManager);
     if (opts.outputMode == GlobalOptions::OutputMode::CHIR) {
         writer->SetSerializingCommon();
     }
@@ -1387,7 +1375,7 @@ bool ImportManager::IsExtendAccessible(
 
 const Ptr<Type> ImportManager::FindImplmentInterface(const File& file, const Decl& member, const Ptr<Type>& it) const
 {
-    auto targetDecl = DynamicCast<InheritableDecl>(it->GetTarget());
+    auto targetDecl = Ty::GetDeclPtrOfTy<InheritableDecl>(it->ty);
     if (targetDecl == nullptr) {
         return nullptr;
     }
